@@ -370,15 +370,11 @@ document.addEventListener("mouseup", () => {
     })
   );
 });
-
-document.querySelector(".toggle-panel").addEventListener("click", () => {
-  document.getElementById("floatingControls")
-    .classList.toggle("collapsed");
-});
 document.querySelector(".toggle-panel")
   ?.addEventListener("click", () => {
     document.getElementById("floatingControls")
       .classList.toggle("collapsed");
   });
+
 
 

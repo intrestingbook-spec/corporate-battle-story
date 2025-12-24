@@ -17,8 +17,7 @@ function showChapter(i) {
   updateProgress();
   loadComments();
   renderReviews();
-  updateAverageRating();
-  updateTopRatedBadge();
+  
 }
 
 
@@ -93,36 +92,35 @@ if (savedFont) document.documentElement.style.setProperty("--font", savedFont+"p
 
 showChapter(current);
 
-function getChapterKey() {
-  return "comments_chapter_" + current;
+/* ================= FIREBASE COMMENTS ================= */
+
+function chapterPath() {
+  return "comments/chapter_" + current;
 }
 
-/* Load comments */
 function loadComments() {
   const list = document.getElementById("commentList");
   if (!list) return;
 
   list.innerHTML = "";
-  const comments = JSON.parse(localStorage.getItem(getChapterKey())) || [];
 
-  comments.forEach(c => {
-  const div = document.createElement("div");
-  div.className = "comment";
+  db.ref(chapterPath()).off(); // prevent duplicates
+  db.ref(chapterPath()).on("child_added", snap => {
+    const c = snap.val();
+    const div = document.createElement("div");
+    div.className = "comment";
 
-  const letter = c.name.charAt(0).toUpperCase();
+    div.innerHTML = `
+      <div class="avatar">${c.name.charAt(0).toUpperCase()}</div>
+      <strong>${c.name}</strong>
+      <small>${c.time}</small>
+      <p>${c.text}</p>
+    `;
 
-  div.innerHTML = `
-    <div class="avatar">${letter}</div>
-    <strong>${c.name}</strong>
-    <small>${c.time}</small>
-    <p>${c.text}</p>
-  `;
-  list.appendChild(div);
-});
-
+    list.appendChild(div);
+  });
 }
 
-/* Add comment */
 function addComment() {
   const name = document.getElementById("username").value.trim();
   const text = document.getElementById("commentText").value.trim();
@@ -132,19 +130,15 @@ function addComment() {
     return;
   }
 
-  const comments = JSON.parse(localStorage.getItem(getChapterKey())) || [];
-
-  comments.push({
+  db.ref(chapterPath()).push({
     name,
     text,
     time: new Date().toLocaleString()
   });
 
-  localStorage.setItem(getChapterKey(), JSON.stringify(comments));
-
   document.getElementById("commentText").value = "";
-  loadComments();
 }
+
 
 
 let selectedRating = 0;
@@ -156,8 +150,10 @@ function rate(value) {
   });
 }
 
-function reviewKey() {
-  return "reviews_chapter_" + current;
+/* ================= FIREBASE REVIEWS ================= */
+
+function reviewPath() {
+  return "reviews/chapter_" + current;
 }
 
 function saveReview() {
@@ -168,117 +164,86 @@ function saveReview() {
 
   const text = document.getElementById("reviewText").value.trim();
 
-  const reviews = JSON.parse(localStorage.getItem(reviewKey())) || [];
-
-  reviews.push({
+  db.ref(reviewPath()).push({
     rating: selectedRating,
     text,
     time: new Date().toLocaleDateString()
   });
 
-  localStorage.setItem(reviewKey(), JSON.stringify(reviews));
-
   document.getElementById("reviewText").value = "";
   document.getElementById("reviewMsg").innerText = "✅ Review submitted!";
   selectedRating = 0;
   rate(0);
-
-  renderReviews();
-  updateAverageRating();
 }
-function updateAverageRating() {
-  const reviews = JSON.parse(localStorage.getItem(reviewKey())) || [];
-  if (reviews.length === 0) return;
 
+function renderReviews() {
+  const list = document.getElementById("reviewList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  db.ref(reviewPath()).off();
+  db.ref(reviewPath()).on("value", snap => {
+    const reviews = [];
+    snap.forEach(s => reviews.push(s.val()));
+    if (reviews.length === 0) return;
+
+    const best = getBestReview(reviews);
+
+    if (best) {
+      list.innerHTML += `
+        <div class="review-bubble best pinned">
+          <span class="badge">🏆 Best Review</span>
+          <strong>⭐ ${best.rating}</strong>
+          <p>${best.text || "No written review"}</p>
+          <small>${best.time}</small>
+        </div>
+      `;
+    }
+
+    reviews.forEach(r => {
+      if (r === best) return;
+      list.innerHTML += `
+        <div class="review-bubble">
+          <strong>⭐ ${r.rating}</strong>
+          <p>${r.text || "No written review"}</p>
+          <small>${r.time}</small>
+        </div>
+      `;
+    });
+
+    updateAverageRating(reviews);
+    updateTopRatedBadge(reviews);
+  });
+}
+
+function updateAverageRating(reviews) {
   const avg =
     reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
   document.getElementById("avgRating").innerText =
     `⭐ ${avg.toFixed(1)} / 5 (${reviews.length} reviews)`;
 }
-function getTopRatedChapter() {
-  let best = { chapter: null, avg: 0 };
 
-  for (let i = 0; i < chapters.length; i++) {
-    const reviews = JSON.parse(
-      localStorage.getItem("reviews_chapter_" + i)
-    ) || [];
-
-    if (reviews.length === 0) continue;
-
-    const avg =
-      reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
-
-    if (avg > best.avg) {
-      best = { chapter: i, avg };
-    }
-  }
-  return best;
-}
-
-function updateTopRatedBadge() {
+function updateTopRatedBadge(reviews) {
   const badge = document.getElementById("topRatedBadge");
-  const best = getTopRatedChapter();
+  const avg =
+    reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
 
-  if (best.chapter === current && best.avg >= 4) {
-    badge.style.display = "block";
-  } else {
-    badge.style.display = "none";
-  }
+  badge.style.display = avg >= 4 ? "block" : "none";
 }
-
-
-function renderReviews() {
-  const list = document.getElementById("reviewList");
-  if (!list) return;
-
-  const reviews = JSON.parse(localStorage.getItem(reviewKey())) || [];
-  list.innerHTML = "";
-
-  if (reviews.length === 0) return;
-
-  const best = getBestReview(reviews);
-
-  // 🏆 BEST REVIEW FIRST
-  if (best) {
-    list.innerHTML += `
-      <div class="review-bubble best pinned">
-        <span class="badge">🏆 Best Review</span>
-        <strong>⭐ ${best.rating}</strong>
-        <p>${best.text || "No written review"}</p>
-        <small>${best.time}</small>
-      </div>
-    `;
-  }
-
-  // OTHER REVIEWS
-  reviews.forEach(r => {
-    if (r === best) return;
-
-    list.innerHTML += `
-      <div class="review-bubble">
-        <strong>⭐ ${r.rating}</strong>
-        <p>${r.text || "No written review"}</p>
-        <small>${r.time}</small>
-      </div>
-    `;
-  });
-}
-
 
 function getBestReview(reviews) {
-  if (!reviews || reviews.length === 0) return null;
-
-  // Highest rating, then longest text
   return reviews.reduce((best, curr) => {
     if (!best) return curr;
     if (curr.rating > best.rating) return curr;
-    if (curr.rating === best.rating && curr.text.length > best.text.length)
+    if (curr.rating === best.rating &&
+        (curr.text || "").length > (best.text || "").length)
       return curr;
     return best;
   }, null);
 }
-document.getElementById("year").textContent = new Date().getFullYear();
+
 
 /* ========= FLOATING CONTROLS LOGIC ========= */
 const panel = document.getElementById("floatingControls");

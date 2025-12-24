@@ -44,8 +44,8 @@
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-"@type": "CreativeWork"
-  "name": "The Corporate Battle and the Waiter’s Heart",
+"@type": "CreativeWork",
+"name": "The Corporate Battle and the Waiter’s Heart",
   "author": {
     "@type": "Person",
     "name": "Intresting Book"
@@ -755,7 +755,28 @@ where hearts meet beyond power, pride, and status.
 
 
 
-<script src="script.js" defer></script>
+<!-- Firebase FIRST -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyXXXX",
+    authDomain: "story-comments-b1cec.firebaseapp.com",
+    databaseURL: "https://story-comments-b1cec-default-rtdb.firebaseio.com",
+    projectId: "story-comments-b1cec",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  /* 🔥 MAKE db GLOBAL */
+  window.db = firebase.database();
+</script>
+
+<!-- YOUR SCRIPT LAST (NO defer) -->
+<script src="script.js"></script>
+
+
 
 
 </body>

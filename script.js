@@ -123,7 +123,7 @@ function loadComments() {
 }
 
 /* Add comment */
-function postComment() {
+function addComment() {
   const name = document.getElementById("username").value.trim();
   const text = document.getElementById("commentText").value.trim();
 
@@ -217,17 +217,16 @@ function getTopRatedChapter() {
 }
 
 function updateTopRatedBadge() {
-  const best = getTopRatedChapter();
   const badge = document.getElementById("topRatedBadge");
+  const best = getTopRatedChapter();
 
-  if (!badge) return;
-
-  if (best.chapter === current) {
+  if (best.chapter === current && best.avg >= 4) {
     badge.style.display = "block";
   } else {
     badge.style.display = "none";
   }
 }
+
 
 function renderReviews() {
   const list = document.getElementById("reviewList");
@@ -370,11 +369,12 @@ document.addEventListener("mouseup", () => {
     })
   );
 });
+
+
 document.querySelector(".toggle-panel")
   ?.addEventListener("click", () => {
     document.getElementById("floatingControls")
       .classList.toggle("collapsed");
   });
-
 
 

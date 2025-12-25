@@ -160,7 +160,7 @@ body {
 .chapter-img {
   width: 100%;
   height: auto;
-  max-height: 420px;
+  max-height: 800px;
   object-fit: cover;
 }
 
@@ -791,3 +791,4 @@ body.dark .controls-inner button {
     bottom: 80px;
   }
 }
+
